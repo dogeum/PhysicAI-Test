@@ -98,10 +98,10 @@ class PhysicAIArmIKNode(Node):
         self.target_seq = 0
         self.solved_seq = -1
         self.solved_roll = None
-        self.declare_parameter('joint_topic', '/joint_states')
+        self.declare_parameter('joint_topic', '/follower/joint_states')
         self.declare_parameter('target_topic', '/target_pose')
         self.declare_parameter('gripper_topic', '/gripper_open')
-        self.declare_parameter('output_topic', '/joint_targets')
+        self.declare_parameter('output_topic', '/follower/joint_targets')
         self.declare_parameter('publish_hz', 60.0)
         self.declare_parameter('iters', 4)
         self.declare_parameter('damping', 0.02)

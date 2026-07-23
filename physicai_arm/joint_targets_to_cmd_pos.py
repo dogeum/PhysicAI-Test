@@ -21,7 +21,7 @@ class JointTargetsToCmdPos(Node):
     def __init__(self) -> None:
         super().__init__("joint_targets_to_cmd_pos")
 
-        self.declare_parameter("input_topic", "/joint_targets")
+        self.declare_parameter("input_topic", "/follower/joint_targets")
         self.declare_parameter(
             "joint_order",
             ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"],

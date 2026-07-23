@@ -56,7 +56,7 @@ class PhysicAIArmFKNode(Node):
         q.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL
         q.reliability = QoSReliabilityPolicy.RELIABLE
         self.create_subscription(String, '/robot_description', self.urdf_cb, q)
-        self.create_subscription(JointState, '/joint_states', self.js_cb, 50)
+        self.create_subscription(JointState, '/follower/joint_states', self.js_cb, 50)
         self.pub = self.create_publisher(PoseStamped, '/ee_pose', 50)
 
     def urdf_cb(self, msg):
