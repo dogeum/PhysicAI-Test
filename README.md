@@ -13,9 +13,10 @@ On details, please check below the link.
 ## Installation
 
 ```sh
+source ~/ros2_base/install/local_setup.bash
 mkdir -p ~/<your_workspace_name\>/src/physicai_arm
 cd ~/<your_workspace_name\>/src/physicai_arm
-git clone https://github.com/hanback-lab/PhysicAI-Arm-ROS physicai_arm
+git clone --branch busan https://github.com/hanback-lab/PhysicAI-Arm-ROS physicai_arm
 chmod +x "launch/*.launch.py"
 cd ../../
 colcon build --symlink-install --packages-select physicai_arm
@@ -28,7 +29,7 @@ colcon build --symlink-install --packages-select physicai_arm
 When opening a new terminal to run the program, please make sure to enter the command below before proceeding. This is a prerequisite for all procedures.
 
 ```sh
-source ~/<your_workspace_name\>/install/setup.bash  # or setup.zsh
+source ~/<your_workspace_name\>/install/setup.bash
 ```
 
 ### Activate manipulator + camera + TF2
