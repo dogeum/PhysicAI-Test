@@ -44,8 +44,8 @@ The topic information for publishing and subscribing is as follows.
 | Topic | Pub/Sub | Message type | Description | 
 | --- | ------- | -------- | ---- |
 | /front_cam, /top_cam | Pub | `sensor_msgs/Image` | Publish images from each of the two cameras attached to the equipment. |
-| /joint_states | Pub | `sensor_msgs/JointState` | Publish the manipulator's current joint angles. |
-| /joint_targets | Sub | `sensor_msgs/JointState` | Publish a message to this topic if you want to set the target joint angle of the manipulator. |
+| /follower/joint_states | Pub | `sensor_msgs/JointState` | Publish the manipulator's current joint angles. |
+| /follower/joint_targets | Sub | `sensor_msgs/JointState` | Publish a message to this topic if you want to set the target joint angle of the manipulator. |
 | /tf | Pub | `tf2_msgs/TFMessage` | Publish a TF2 message from the manipulator. |
 | /safety/torque_enable | Sub | `std_msgs/Bool` | Enables/disables the motor torque setting of the manipulator. When disabled, the torque value assigned to the motor is released, allowing the manipulator's posture to be changed arbitrarily through external physical factors, such as using hands. |
 
@@ -116,8 +116,8 @@ The topic information for publishing and subscribing is as follows.
 
 | Topic | Pub/Sub | Message type | Description | 
 | --- | ------- | -------- | ---- |
-| /joint_states | Pub | `sensor_msgs/JointState` | Publish the manipulator joint angles placed on the simulation. |
-| /joint_targets | Sub | `sensor_msgs/JointState` | Specifies the joint angle status of the manipulator placed on the simulation. |
+| /follower/joint_states | Pub | `sensor_msgs/JointState` | Publish the manipulator joint angles placed on the simulation. |
+| /follower/joint_targets | Sub | `sensor_msgs/JointState` | Specifies the joint angle status of the manipulator placed on the simulation. |
 | /sim/elbow_flex/cmd_pos | Sub | `std_msgs/Float64` | Specifies the joint angle state to the Ignition Gazebo JointPositionController placed on the elbow_flex joint. |
 | /sim/gripper/cmd_pos | Sub | `std_msgs/Float64` | Specifies the joint angle state to the Ignition Gazebo JointPositionController placed on the gripper joint. |
 | /sim/shoulder_lift/cmd_pos | Sub | `std_msgs/Float64` | Specifies the joint angle state to the Ignition Gazebo JointPositionController placed on the shoulder_lift joint. |
