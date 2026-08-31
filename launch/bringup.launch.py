@@ -1,5 +1,6 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -37,6 +38,12 @@ def generate_launch_description():
             default_value=config_path_default,
             description="Path to joints.yaml"
         ),
+
+        DeclareLaunchArgument(
+            "enable_leader",
+            default_value="false",
+            description="Start leader arm driver if true."
+        ),
         
         Node(
             package='physicai_arm',
@@ -44,7 +51,7 @@ def generate_launch_description():
             name='feetech_follower_driver',
             output='screen',
             parameters=[
-                {'config_path': config_path_default},
+                {'config_path': config_path},
                 {'simulate': simulate}
             ]
         ),
@@ -53,9 +60,10 @@ def generate_launch_description():
             package='physicai_arm',
             executable='feetech_leader_driver',
             name='feetech_leader_driver',
+            condition=IfCondition(LaunchConfiguration("enable_leader")),
             output='screen',
             parameters=[
-                {'config_path': config_path_default},
+                {'config_path': config_path},
                 {'simulate': simulate}
             ]
         ),

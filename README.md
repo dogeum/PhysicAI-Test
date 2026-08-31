@@ -28,7 +28,7 @@ colcon build --symlink-install --packages-select physicai_arm
 When opening a new terminal to run the program, please make sure to enter the command below before proceeding. This is a prerequisite for all procedures.
 
 ```sh
-source ~/<your_workspace_name\>/install/setup.bash  # or setup.zsh
+source ~/<your_workspace_name\>/install/local_setup.bash  # or setup.zsh
 ```
 
 ### Activate manipulator + camera + TF2
@@ -39,15 +39,23 @@ The method for simultaneously activating the equipment manipulator's motors, cap
 ros2 launch physicai_arm bringup.launch.py
 ```
 
+By default, this launch file starts only the follower arm driver. If a leader arm is connected and should publish `/leader/joint_states`, run:
+
+```sh
+ros2 launch physicai_arm bringup.launch.py enable_leader:=true
+```
+
+Do not run the teleoperation node during the course exercises.
+
 The topic information for publishing and subscribing is as follows.
 
 | Topic | Pub/Sub | Message type | Description | 
 | --- | ------- | -------- | ---- |
-| /front_cam, /top_cam | Pub | `sensor_msgs/Image` | Publish images from each of the two cameras attached to the equipment. |
+| /arm/front_cam, /arm/top_cam | Pub | `sensor_msgs/Image` | Publish images from each of the two cameras attached to the equipment. |
 | /follower/joint_states | Pub | `sensor_msgs/JointState` | Publish the manipulator's current joint angles. |
 | /follower/joint_targets | Sub | `sensor_msgs/JointState` | Publish a message to this topic if you want to set the target joint angle of the manipulator. |
 | /tf | Pub | `tf2_msgs/TFMessage` | Publish a TF2 message from the manipulator. |
-| /safety/torque_enable | Sub | `std_msgs/Bool` | Enables/disables the motor torque setting of the manipulator. When disabled, the torque value assigned to the motor is released, allowing the manipulator's posture to be changed arbitrarily through external physical factors, such as using hands. |
+| /follower/safety/torque_enable | Sub | `std_msgs/Bool` | Enables/disables the motor torque setting of the manipulator. When disabled, the torque value assigned to the motor is released, allowing the manipulator's posture to be changed arbitrarily through external physical factors, such as using hands. |
 
 ### FK Calculate
 

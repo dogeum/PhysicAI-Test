@@ -5,6 +5,7 @@ from cv_bridge import CvBridge
 
 import cv2
 
+
 class CameraNode(Node):
     def __init__(self):
         super().__init__("camera_node")
@@ -30,6 +31,10 @@ class CameraNode(Node):
             "appsink max-buffers=1 drop=true sync=false"
         )
         self.cam = cv2.VideoCapture(gst, cv2.CAP_GSTREAMER)
+        if not self.cam.isOpened():
+            raise RuntimeError(
+                f"Failed to open {self.camera_name} camera with sensor-id={sensor_id}."
+            )
 
         self.cam_publisher = self.create_publisher(
             Image,
@@ -49,11 +54,18 @@ class CameraNode(Node):
         
     def destroy_node(self):
         self.get_logger().info("Stopping camera.")
-        self.cam.release()
+        if self.cam.isOpened():
+            self.cam.release()
         return super().destroy_node()
         
     def loop(self):
         ret, img = self.cam.read()
+        if not ret or img is None:
+            self.get_logger().warning(
+                f"Failed to read frame from {self.camera_name} camera."
+            )
+            return
+
         image = self.bridge.cv2_to_imgmsg(img, "bgr8")
         self.cam_publisher.publish(image)
 
