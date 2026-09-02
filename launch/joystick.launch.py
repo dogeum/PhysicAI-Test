@@ -18,9 +18,22 @@ def generate_launch_description():
     
     with open(urdf_path_default, "r", encoding="utf-8") as f:
         robot_description = f.read()
-    
+
+    home_wrist_roll = ParameterValue(
+        LaunchConfiguration("home_wrist_roll_rad"), value_type=float
+    )
 
     return LaunchDescription([
+
+        DeclareLaunchArgument(
+            "home_wrist_roll_rad",
+            default_value="1.5708",
+            description=(
+                "Absolute wrist_roll angle (rad) the IK holds as home. "
+                "1.5708 = +90 deg (CCW); use -1.5708 to flip direction, "
+                "or 'nan' to disable and keep the measured roll."
+            ),
+        ),
 
         Node(
             package="joy",
@@ -31,12 +44,15 @@ def generate_launch_description():
                 "device": "/dev/input/js0"
             }]
         ),
-        
+
         Node(
             package="physicai_arm",
             executable="ik_calc",
             name="ik_inference",
-            output="screen"
+            output="screen",
+            parameters=[{
+                "home_wrist_roll_rad": home_wrist_roll
+            }]
         ),
 
         # Publishes /ee_pose from /robot_description + /follower/joint_states

@@ -115,11 +115,20 @@ class PhysicAIArmIKNode(Node):
         self.declare_parameter('quantize_to_servo_tick', True)
         self.declare_parameter('gripper_open_pos', 0.80)
         self.declare_parameter('gripper_closed_pos', 0.00)
+        # Absolute wrist_roll angle (rad) to hold as "home". NaN -> disabled,
+        # i.e. keep tracking the measured roll (original behaviour).
+        self.declare_parameter('home_wrist_roll_rad', float('nan'))
         depth = int(self.get_parameter('depth').value)
         self.create_subscription(JointState, str(self.get_parameter('joint_topic').value), self.js_cb, depth)
         self.create_subscription(PoseStamped, str(self.get_parameter('target_topic').value), self.target_cb, depth)
         self.create_subscription(Bool, str(self.get_parameter('gripper_topic').value), self.gripper_cb, depth)
         self.pub = self.create_publisher(JointState, str(self.get_parameter('output_topic').value), depth)
+        home_roll = float(self.get_parameter('home_wrist_roll_rad').value)
+        if math.isfinite(home_roll):
+            self._home_roll = float(np.clip(home_roll, LOWER[ROLL_IDX], UPPER[ROLL_IDX]))
+            self.get_logger().info(f"wrist_roll home locked to {self._home_roll:.4f} rad")
+        else:
+            self._home_roll = None
         publish_hz = float(self.get_parameter('publish_hz').value)
         if not publish_hz > 0.0:
             self.get_logger().warn(f"invalid publish_hz {publish_hz}, falling back to 60.0 Hz")
@@ -166,7 +175,7 @@ class PhysicAIArmIKNode(Node):
 
     def solve_seed(self, target_pos, target_pitch, seed):
         q1 = self.pan_for(target_pos)
-        q5 = float(seed[ROLL_IDX])
+        q5 = float(seed[ROLL_IDX]) if self._home_roll is None else self._home_roll
         q2 = float(seed[1])
         q3 = float(seed[2])
         lam2 = float(self.get_parameter('damping').value) ** 2
@@ -206,7 +215,8 @@ class PhysicAIArmIKNode(Node):
             if e1 < best_err:
                 best_q, best_err = q1, e1
         if best_err > float(self.get_parameter('accept_err').value):
-            best_q = self.pack(self.pan_for(target_pos), q_ref[1], q_ref[2], target_pitch, q_ref[4])
+            roll_seed = float(q_ref[4]) if self._home_roll is None else self._home_roll
+            best_q = self.pack(self.pan_for(target_pos), q_ref[1], q_ref[2], target_pitch, roll_seed)
         return np.clip(best_q, LOWER, UPPER)
 
     def publish_target(self):
