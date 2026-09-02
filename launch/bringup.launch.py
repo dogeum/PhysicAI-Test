@@ -85,6 +85,9 @@ def generate_launch_description():
                 "robot_description": robot_description,
                 "use_sim_time": use_sim_time
             }],
+            remappings=[
+                ("/joint_states", "/follower/joint_states")
+            ]
         ),
         
         Node(
