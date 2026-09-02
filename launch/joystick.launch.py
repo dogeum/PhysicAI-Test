@@ -38,12 +38,22 @@ def generate_launch_description():
             name="ik_inference",
             output="screen"
         ),
-        
+
+        # Publishes /ee_pose from /robot_description + /follower/joint_states
+        # (both provided by bringup.launch.py). joy_to_target uses it to snap
+        # its internal EE target to the arm's real pose on start-up.
+        Node(
+            package="physicai_arm",
+            executable="fk_calc",
+            name="fk_inference",
+            output="screen"
+        ),
+
         Node(
             package="physicai_arm",
             executable="joy_to_target",
             name="joystick_bridge_node",
-            output="screen"            
+            output="screen"
         )
-        
+
     ])

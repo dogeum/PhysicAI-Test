@@ -80,12 +80,17 @@ class PhysicAIArmFKNode(Node):
             }
         chain = []
         child = 'gripper_frame_link'
-        while child != 'base_link':
-            if child not in child_to_joint:
-                self.get_logger().warning('gripper_frame_link chain not found in robot_description')
+        seen = set()
+        while child in child_to_joint:
+            if child in seen:
+                self.get_logger().warning('cycle detected in robot_description kinematic chain')
                 return
+            seen.add(child)
             chain.insert(0, child_to_joint[child])
             child = child_to_joint[child]['parent']
+        if not chain:
+            self.get_logger().warning('gripper_frame_link chain not found in robot_description')
+            return
         self.chain = chain
         self.names = [j['name'] for j in chain if j['type'] in ('revolute', 'continuous', 'prismatic')]
         self.get_logger().info('robot_description loaded')
@@ -123,9 +128,13 @@ class PhysicAIArmFKNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = PhysicAIArmFKNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':

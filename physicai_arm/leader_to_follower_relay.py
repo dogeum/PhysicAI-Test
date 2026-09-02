@@ -5,12 +5,16 @@ from typing import List, Optional
 
 import rclpy
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from sensor_msgs.msg import JointState
 
 from ament_index_python.packages import get_package_share_directory
 from pathlib import Path
 
-from .feetech_common import load_joint_config
+try:
+    from .feetech_common import load_joint_config
+except ImportError:
+    from feetech_common import load_joint_config
 
 default_config_path = str(
     Path(get_package_share_directory("physicai_arm")) / "config" / "joints.yaml"
@@ -21,7 +25,7 @@ class LeaderToFollowerRelayNode(Node):
         super().__init__("leader_to_follower_relay")
         self.declare_parameter("config_path", default_config_path)
         self.declare_parameter("follower_arm_role", "follower")
-        self.declare_parameter("joint_names", [])
+        self.declare_parameter("joint_names", Parameter.Type.STRING_ARRAY)
         self.declare_parameter("input_topic", "/leader/joint_states")
         self.declare_parameter("output_topic", "/follower/joint_targets")
 

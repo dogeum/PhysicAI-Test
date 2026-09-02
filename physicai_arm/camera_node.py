@@ -39,7 +39,7 @@ class CameraNode(Node):
         self.cam_publisher = self.create_publisher(
             Image,
             f"/arm/{self.camera_name}_cam",
-            0
+            10
         )
         self.bridge = CvBridge()
 
@@ -71,10 +71,17 @@ class CameraNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = CameraNode()
+    node = None
     try:
+        node = CameraNode()
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
-    node.destroy_node()
-    rclpy.shutdown()
+    finally:
+        if node is not None:
+            node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()

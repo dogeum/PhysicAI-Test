@@ -120,7 +120,11 @@ class PhysicAIArmIKNode(Node):
         self.create_subscription(PoseStamped, str(self.get_parameter('target_topic').value), self.target_cb, depth)
         self.create_subscription(Bool, str(self.get_parameter('gripper_topic').value), self.gripper_cb, depth)
         self.pub = self.create_publisher(JointState, str(self.get_parameter('output_topic').value), depth)
-        self.timer = self.create_timer(1.0 / float(self.get_parameter('publish_hz').value), self.tick)
+        publish_hz = float(self.get_parameter('publish_hz').value)
+        if not publish_hz > 0.0:
+            self.get_logger().warn(f"invalid publish_hz {publish_hz}, falling back to 60.0 Hz")
+            publish_hz = 60.0
+        self.timer = self.create_timer(1.0 / publish_hz, self.tick)
 
     def js_cb(self, msg):
         self.last_names = list(msg.name)
@@ -184,7 +188,10 @@ class PhysicAIArmIKNode(Node):
             qh = self.pack(q1, q2, q3 + h, target_pitch, q5)
             j1 = (fk_pos(qh) - p) / h
             J = np.column_stack((j0, j1))
-            dq = np.linalg.solve(J.T @ J + lam2 * np.eye(2, dtype=float), J.T @ e)
+            try:
+                dq = np.linalg.solve(J.T @ J + lam2 * np.eye(2, dtype=float), J.T @ e)
+            except np.linalg.LinAlgError:
+                break
             dq = np.clip(dq, -max_dq, max_dq)
             q2 = float(np.clip(q2 + float(dq[0]), LOWER[1], UPPER[1]))
             q3 = float(np.clip(q3 + float(dq[1]), LOWER[2], UPPER[2]))
@@ -211,9 +218,12 @@ class PhysicAIArmIKNode(Node):
         gripper = float(self.get_parameter('gripper_open_pos').value) if self.gripper_open else float(self.get_parameter('gripper_closed_pos').value)
         qmap = {n: float(v) for n, v in zip(NAMES, q)}
         qmap['gripper'] = gripper
+        names = list(self.last_names) if self.last_names else NAMES + ['gripper']
+        if 'gripper' not in names:
+            names = names + ['gripper']
         out = JointState()
         out.header.stamp = self.get_clock().now().to_msg()
-        out.name = self.last_names if self.last_names else NAMES + ['gripper']
+        out.name = names
         out.position = [qmap[n] if n in qmap else float(self.state.get(n, 0.0)) for n in out.name]
         self.pub.publish(out)
 
@@ -236,6 +246,8 @@ def main(args=None):
     node = PhysicAIArmIKNode()
     try:
         rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
     finally:
         node.destroy_node()
         rclpy.shutdown()

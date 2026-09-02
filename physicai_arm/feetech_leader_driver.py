@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import rclpy
 
-from .feetech_common import FeetechStatePublisherBase
+try:
+    from .feetech_common import FeetechStatePublisherBase
+except ImportError:
+    from feetech_common import FeetechStatePublisherBase
 
 
 class FeetechLeaderStatePublisherNode(FeetechStatePublisherBase):

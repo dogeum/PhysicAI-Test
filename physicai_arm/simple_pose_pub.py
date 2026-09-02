@@ -16,7 +16,11 @@ class SimplePoseStampedPub(Node):
         self.declare_parameter('qz', 0.0)
         self.declare_parameter('qw', 1.0)
         self.pub = self.create_publisher(PoseStamped, str(self.get_parameter('topic').value), 10)
-        self.create_timer(1.0 / float(self.get_parameter('rate').value), self.tick)
+        rate = float(self.get_parameter('rate').value)
+        if not rate > 0.0:
+            self.get_logger().warn(f"invalid rate {rate}, falling back to 20.0 Hz")
+            rate = 20.0
+        self.create_timer(1.0 / rate, self.tick)
 
     def tick(self):
         msg = PoseStamped()
@@ -34,9 +38,13 @@ class SimplePoseStampedPub(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = SimplePoseStampedPub()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
