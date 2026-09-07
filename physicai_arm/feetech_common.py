@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import math
+import os
 import threading
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
@@ -7,6 +8,46 @@ from typing import Dict, List, Optional, Tuple
 import yaml
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
+
+
+def _package_config_dir() -> Optional[str]:
+    try:
+        from ament_index_python.packages import get_package_share_directory
+
+        return os.path.join(get_package_share_directory("physicai_arm"), "config")
+    except Exception:
+        return None
+
+
+def resolve_config_path(path: str) -> str:
+    """Resolve a config path that may be empty, a bare filename, or a directory to a yaml file.
+
+    Falls back to the installed ``physicai_arm/config`` share directory so nodes can be
+    started with plain ``ros2 run`` (without a launch file supplying ``config_path``).
+    """
+    if not path:
+        path = "joints.yaml"
+
+    # A directory: look for joints.yaml inside it.
+    if os.path.isdir(path):
+        candidate = os.path.join(path, "joints.yaml")
+        if os.path.isfile(candidate):
+            return candidate
+        raise FileNotFoundError(
+            f"config_path is a directory and contains no joints.yaml: {path}"
+        )
+
+    if os.path.isfile(path):
+        return path
+
+    # Not found as given: try resolving a bare name against the package share dir.
+    config_dir = _package_config_dir()
+    if config_dir is not None:
+        candidate = os.path.join(config_dir, os.path.basename(path))
+        if os.path.isfile(candidate):
+            return candidate
+
+    raise FileNotFoundError(f"config file not found: {path}")
 
 
 def clamp(x: float, lo: float, hi: float) -> float:
@@ -85,6 +126,7 @@ def load_joint_config(
     device_override: Optional[str] = None,
     baudrate_override: Optional[int] = None,
 ) -> JointConfig:
+    path = resolve_config_path(path)
     with open(path, "r", encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
 

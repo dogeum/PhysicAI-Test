@@ -4,6 +4,7 @@ import time
 from typing import List, Optional
 
 import rclpy
+from rclpy.exceptions import ParameterUninitializedException
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from sensor_msgs.msg import JointState
@@ -31,7 +32,12 @@ class LeaderToFollowerRelayNode(Node):
 
         config_path = self.get_parameter("config_path").get_parameter_value().string_value
         follower_arm_role = self.get_parameter("follower_arm_role").get_parameter_value().string_value or "follower"
-        configured_joint_names = list(self.get_parameter("joint_names").get_parameter_value().string_array_value)
+        try:
+            configured_joint_names = list(
+                self.get_parameter("joint_names").get_parameter_value().string_array_value
+            )
+        except ParameterUninitializedException:
+            configured_joint_names = []
         if configured_joint_names:
             self.joint_names = configured_joint_names
         else:

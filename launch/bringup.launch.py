@@ -17,6 +17,7 @@ def generate_launch_description():
     use_sim_time = ParameterValue(LaunchConfiguration("use_sim_time"), value_type=bool)
     simulate = ParameterValue(LaunchConfiguration("simulate"), value_type=bool)
     config_path = LaunchConfiguration('config_path')
+    home_wrist_roll = ParameterValue(LaunchConfiguration("home_wrist_roll_rad"), value_type=float)
     
     with open(urdf_path_default, "r", encoding="utf-8") as f:
         robot_description = f.read()
@@ -41,10 +42,21 @@ def generate_launch_description():
 
         DeclareLaunchArgument(
             "enable_leader",
-            default_value="false",
+            default_value="true",
             description="Start leader arm driver if true."
         ),
-        
+
+        DeclareLaunchArgument(
+            "home_wrist_roll_rad",
+            default_value="1.5708",
+            description=(
+                "Absolute wrist_roll angle (rad) the follower snaps to as soon as "
+                "torque is enabled at start-up. 1.5708 = +90 deg (CCW); use "
+                "-1.5708 to flip direction, or 'nan' to disable and stay wherever "
+                "the arm physically is."
+            ),
+        ),
+
         Node(
             package='physicai_arm',
             executable='feetech_follower_driver',
@@ -52,7 +64,8 @@ def generate_launch_description():
             output='screen',
             parameters=[
                 {'config_path': config_path},
-                {'simulate': simulate}
+                {'simulate': simulate},
+                {'home_wrist_roll_rad': home_wrist_roll}
             ]
         ),
         

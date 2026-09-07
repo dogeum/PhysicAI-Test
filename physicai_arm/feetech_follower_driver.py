@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
+import math
 import time
-from typing import Dict
+from typing import Dict, Optional
 
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
@@ -31,6 +32,10 @@ class FeetechFollowerDriverNode(FeetechStatePublisherBase):
         self.declare_parameter("command_threshold_ticks", 1)
         self.declare_parameter("heartbeat_hz", 10.0)
         self.declare_parameter("hold_last_target_on_timeout", True)
+        # Absolute wrist_roll angle (rad) to snap to as soon as torque is enabled
+        # (i.e. right at start-up). NaN -> disabled, i.e. stay wherever the arm
+        # physically is. 1.5708 = +90 deg.
+        self.declare_parameter("home_wrist_roll_rad", float("nan"))
 
         self.joint_targets_topic = self.get_parameter("joint_targets_topic").get_parameter_value().string_value
         self.safety_torque_topic = self.get_parameter("safety_torque_topic").get_parameter_value().string_value
@@ -47,6 +52,13 @@ class FeetechFollowerDriverNode(FeetechStatePublisherBase):
         self.hold_last_target_on_timeout = (
             self.get_parameter("hold_last_target_on_timeout").get_parameter_value().bool_value
         )
+        home_wrist_roll = float(self.get_parameter("home_wrist_roll_rad").get_parameter_value().double_value)
+        if math.isfinite(home_wrist_roll) and "wrist_roll" in self.cfg.joint_names:
+            lo, hi = self.cfg.limit_rad["wrist_roll"]
+            self._home_wrist_roll: Optional[float] = clamp(home_wrist_roll, lo, hi)
+            self.get_logger().info(f"wrist_roll home-on-enable set to {self._home_wrist_roll:.4f} rad")
+        else:
+            self._home_wrist_roll = None
 
         current = self.get_measured_positions()
         self._torque_requested = True
@@ -101,6 +113,10 @@ class FeetechFollowerDriverNode(FeetechStatePublisherBase):
             with self._state_lock:
                 self._torque_enabled = False
             return False
+
+        if self._home_wrist_roll is not None:
+            wrist_roll_idx = self.cfg.joint_names.index("wrist_roll")
+            hold[wrist_roll_idx] = self._home_wrist_roll
 
         with self._io_lock:
             self.iface.write_positions_rad(hold, speed=self.write_speed, acceleration=self.write_acc)

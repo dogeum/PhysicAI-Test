@@ -39,10 +39,10 @@ The method for simultaneously activating the equipment manipulator's motors, cap
 ros2 launch physicai_arm bringup.launch.py
 ```
 
-By default, this launch file starts only the follower arm driver. If a leader arm is connected and should publish `/leader/joint_states`, run:
+By default, this launch file also starts the leader arm driver, publishing `/leader/joint_states`. If no leader arm is connected, disable it with:
 
 ```sh
-ros2 launch physicai_arm bringup.launch.py enable_leader:=true
+ros2 launch physicai_arm bringup.launch.py enable_leader:=false
 ```
 
 Do not run the teleoperation node during the course exercises.
