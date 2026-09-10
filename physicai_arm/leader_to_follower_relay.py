@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import math
 import time
 from typing import List, Optional
@@ -13,9 +12,9 @@ from ament_index_python.packages import get_package_share_directory
 from pathlib import Path
 
 try:
-    from .feetech_common import load_joint_config
+    from .feetech_common import clamp, load_joint_config
 except ImportError:
-    from feetech_common import load_joint_config
+    from feetech_common import clamp, load_joint_config
 
 default_config_path = str(
     Path(get_package_share_directory("physicai_arm")) / "config" / "joints.yaml"
@@ -29,6 +28,11 @@ class LeaderToFollowerRelayNode(Node):
         self.declare_parameter("joint_names", Parameter.Type.STRING_ARRAY)
         self.declare_parameter("input_topic", "/leader/joint_states")
         self.declare_parameter("output_topic", "/follower/joint_targets")
+        # Offset (rad) added to the leader wrist_roll before it is sent to the
+        # follower, so leader 0 deg maps to the follower home pose set by the
+        # follower driver's home_wrist_roll_rad. 1.5708 = +90 deg (CCW);
+        # 'nan' or 0.0 disables the shift.
+        self.declare_parameter("home_wrist_roll_rad", 1.5708)
 
         config_path = self.get_parameter("config_path").get_parameter_value().string_value
         follower_arm_role = self.get_parameter("follower_arm_role").get_parameter_value().string_value or "follower"
@@ -38,10 +42,28 @@ class LeaderToFollowerRelayNode(Node):
             )
         except ParameterUninitializedException:
             configured_joint_names = []
-        if configured_joint_names:
-            self.joint_names = configured_joint_names
+
+        cfg = None
+        if not configured_joint_names:
+            cfg = load_joint_config(config_path, arm_role=follower_arm_role)
+            self.joint_names = cfg.joint_names
         else:
-            self.joint_names = load_joint_config(config_path, arm_role=follower_arm_role).joint_names
+            self.joint_names = configured_joint_names
+            try:
+                cfg = load_joint_config(config_path, arm_role=follower_arm_role)
+            except Exception as exc:
+                self.get_logger().warn(f"joint config unavailable, target clamping disabled: {exc}")
+
+        self.limit_rad = dict(cfg.limit_rad) if cfg is not None else {}
+
+        home_wrist_roll = self.get_parameter("home_wrist_roll_rad").get_parameter_value().double_value
+        self.offset_rad = [0.0] * len(self.joint_names)
+        if math.isfinite(home_wrist_roll) and home_wrist_roll != 0.0 and "wrist_roll" in self.joint_names:
+            self.offset_rad[self.joint_names.index("wrist_roll")] = float(home_wrist_roll)
+            self.get_logger().info(
+                f"wrist_roll teleop offset set to {home_wrist_roll:.4f} rad "
+                "(leader 0 rad -> follower home pose)"
+            )
 
         self.input_topic = self.get_parameter("input_topic").get_parameter_value().string_value
         self.output_topic = self.get_parameter("output_topic").get_parameter_value().string_value
@@ -86,7 +108,15 @@ class LeaderToFollowerRelayNode(Node):
             self._warn_every("invalid", "discarding leader JointState containing non-finite joint positions")
             return
 
+        # Keep the raw leader pose as the relay's own state so the offset is
+        # applied exactly once per message, never accumulated.
         self._last_target = list(target)
+
+        target = [value + offset for value, offset in zip(target, self.offset_rad)]
+        target = [
+            clamp(value, *self.limit_rad[joint_name]) if joint_name in self.limit_rad else value
+            for joint_name, value in zip(self.joint_names, target)
+        ]
 
         out = JointState()
         out.header.stamp = (
